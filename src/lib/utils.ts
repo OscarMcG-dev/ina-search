@@ -64,4 +64,30 @@ export function calculateRelevanceScore(paper: any): number {
   }
   
   return score;
+}
+
+/**
+ * Creates a debounced version of a function
+ * @param func - The function to debounce
+ * @param wait - The number of milliseconds to delay
+ * @returns A debounced version of the original function
+ */
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  
+  return function(...args: Parameters<T>) {
+    const later = () => {
+      timeout = null;
+      func(...args);
+    };
+    
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    
+    timeout = setTimeout(later, wait);
+  };
 } 
