@@ -11,7 +11,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { showToast } from '@/lib/toast-utils';
 
 interface ResearchPaperCardProps {
   paper: Work;
@@ -47,10 +47,10 @@ function ResearchPaperCard({ paper }: ResearchPaperCardProps) {
         userEmail = window.prompt('Please enter your email address to receive this paper in OneNote:') || '';
         if (!userEmail || !userEmail.includes('@')) {
           setIsSending(false);
-          toast({
-            variant: "destructive",
+          showToast({
             title: "Invalid Email",
-            description: "Please provide a valid email address.",
+            message: "Please provide a valid email address.",
+            type: 'error'
           });
           return;
         }
@@ -84,22 +84,24 @@ function ResearchPaperCard({ paper }: ResearchPaperCardProps) {
       
       // Display success message, including note about verified email if present
       if (result.note) {
-        toast({
+        showToast({
           title: "Email Sent with Limitations",
-          description: result.note,
+          message: result.note,
+          type: 'info'
         });
       } else {
-        toast({
+        showToast({
           title: "Success!",
-          description: "Paper sent to your email for OneNote",
+          message: "Paper sent to your email for OneNote",
+          type: 'success'
         });
       }
     } catch (error) {
       console.error('Failed to send to OneNote:', error);
-      toast({
-        variant: "destructive",
+      showToast({
         title: "Error",
-        description: `Failed to send: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+        message: `Failed to send: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+        type: 'error'
       });
     } finally {
       setIsSending(false);
