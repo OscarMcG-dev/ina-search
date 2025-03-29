@@ -1,118 +1,73 @@
 @import "tailwindcss";
 
 :root {
-  --background: 220 10% 12%;
-  --foreground: 210 40% 98%;
-  --card: 222 10% 15%;
-  --card-foreground: 210 40% 98%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --background: #ffffff;
+  --foreground: #1a202c;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #1f2937;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #1a202c;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #4f46e5;
+  --success: #059669;
+  --error: #ef4444;
+  --warning: #f59e0b;
   --radius: 0.5rem;
 }
 
-.light {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-* {
-  border-color: rgba(255, 255, 255, 0.1);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --primary: #6366f1;
+    --primary-hover: #818cf8;
+    --primary-foreground: #ffffff;
+    --secondary: #1e293b;
+    --secondary-foreground: #e2e8f0;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #1e293b;
+    --accent-foreground: #e2e8f0;
+    --card: #1e293b;
+    --card-foreground: #f8fafc;
+    --border: #334155;
+    --input: #334155;
+    --ring: #6366f1;
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+  }
 }
 
 body {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-feature-settings: "rlig" 1, "calt" 1;
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 500;
-  letter-spacing: -0.025em;
-}
-
-.text-balance {
-  text-wrap: balance;
-}
-
-/* Card hover animations */
-.research-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.research-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-}
-
-.research-card h3 {
-  transition: line-clamp 0.2s ease;
-}
-
-.research-card:hover h3 {
-  line-clamp: none;
-  -webkit-line-clamp: initial;
-}
-
-/* API Selection Animations */
-.api-button {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.api-button-active {
-  transform: scale(1.05);
-  box-shadow: 0 0 0 2px hsl(var(--primary)), 0 0 20px rgba(59, 130, 246, 0.5);
-}
-
-.api-button-active::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.2), transparent);
-  animation: shine 1.5s infinite;
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-100%);
+@layer base {
+  * {
+    @apply border-transparent;
   }
-  60%, 100% {
-    transform: translateX(100%);
+  
+  body {
+    @apply bg-background text-foreground;
   }
-}
-
-/* Expandable Filters */
-.filters-expandable {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 0.5s ease, opacity 0.3s ease, margin 0.5s ease;
-}
-
-.filters-expanded {
-  max-height: 800px;
-  opacity: 1;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
 }

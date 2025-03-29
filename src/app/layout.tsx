@@ -14,19 +14,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Research Hypothesis Checker",
-  description: "Validate research hypotheses by searching academic literature",
-  keywords: "research, academic, papers, hypothesis, validation, literature",
-  authors: [{ name: "Research Hypothesis Checker Team" }],
+  description: "Validate research hypotheses by searching academic literature from Semantic Scholar and OpenAlex",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         {children}
       </body>
     </html>

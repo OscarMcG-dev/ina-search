@@ -1,151 +1,127 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { SearchIcon, SlidersHorizontal, ChevronUp, ChevronDown } from 'lucide-react';
-import { FilterOptions, FilterSidebar } from './FilterSidebar';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import type { ResearchAPI } from '@/lib/research-api';
 
-// Define the schema for form validation
-const formSchema = z.object({
-  query: z.string().min(2, {
-    message: 'Query must be at least 2 characters.',
-  }),
-  apiSource: z.enum(['semantic-scholar', 'pubmed', 'arxiv']),
-});
-
-// Define the props type for ResearchSearch component
-export interface ResearchSearchProps {
-  onSearch: (query: string, apiSource: string, filters?: FilterOptions) => void;
-  initialQuery?: string;
-  initialApiSource?: 'semantic-scholar' | 'pubmed' | 'arxiv';
-  initialFilters?: FilterOptions;
+interface ResearchSearchProps {
+  onSearch: (hypothesis: string, api: ResearchAPI) => void;
 }
 
-// Define the types for our form values
-type FormValues = z.infer<typeof formSchema>;
+export function ResearchSearch({ onSearch }: ResearchSearchProps) {
+  const [hypothesis, setHypothesis] = useState('');
+  const [selectedApi, setSelectedApi] = useState<ResearchAPI>('openalex');
 
-export function ResearchSearch({ 
-  onSearch, 
-  initialQuery = '', 
-  initialApiSource = 'semantic-scholar',
-  initialFilters
-}: ResearchSearchProps) {
-  // Default filter values
-  const currentYear = new Date().getFullYear();
-  const defaultFilters: FilterOptions = {
-    yearRange: [1990, currentYear],
-    selectedYearRange: [1990, currentYear],
-    citationCount: {
-      min: 0,
-      max: 1000
-    },
-    selectedCitationRange: [0, 1000],
-    publicationTypes: ['journal-article', 'conference-paper', 'review-article', 'systematic-review', 'meta-analysis', 'book-chapter'],
-    selectedPublicationTypes: [],
-    openAccessOnly: false
-  };
-
-  // State for filter settings
-  const [filters, setFilters] = useState<FilterOptions>(initialFilters || defaultFilters);
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-
-  // Initialize the form with default values
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      query: initialQuery,
-      apiSource: initialApiSource,
-    },
-  });
-
-  // Handle form submission
-  const handleSubmit = (values: FormValues) => {
-    onSearch(values.query, values.apiSource, filters);
-  };
-
-  const toggleFilters = () => {
-    setFiltersExpanded(!filtersExpanded);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hypothesis.trim()) {
+      onSearch(hypothesis.trim(), selectedApi);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 p-4 rounded-lg border bg-card shadow-sm">
-        <div className="space-y-3">
-          <FormField
-            control={form.control}
-            name="query"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <div className="relative">
-                    <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Enter your research hypothesis or question..."
-                      className="pl-9 h-9 pr-24"
-                      {...field}
-                    />
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={toggleFilters}
-                      className="absolute right-1 top-1 p-1 h-7 w-7"
-                    >
-                      <SlidersHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </FormControl>
-              </FormItem>
-            )}
-          />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-2">
+        <label 
+          htmlFor="hypothesis" 
+          className="text-base font-medium inline-flex items-center"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="w-4 h-4 mr-2 text-primary"
+          >
+            <path d="M10 22v-4c0-1.1-.9-2-2-2V8"/>
+            <circle cx="14" cy="6" r="2"/>
+            <path d="M18 11c0 5-4 7-6 8"/>
+            <path d="M18 8a6 6 0 0 0-12 0c0 4.8 2.3 7.2 6 10"/>
+          </svg>
+          Enter your research hypothesis
+        </label>
+        <Textarea
+          id="hypothesis"
+          placeholder="Example: Higher levels of mindfulness practice lead to reduced stress levels in college students"
+          value={hypothesis}
+          onChange={(e) => setHypothesis(e.target.value)}
+          className="min-h-[120px] transition-shadow focus:shadow-md resize-none"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Be specific and clear. The more focused your hypothesis, the more relevant your results will be.
+        </p>
+      </div>
 
-          <div className="flex items-center gap-2">
-            <FormField
-              control={form.control}
-              name="apiSource"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Tabs
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="w-full"
-                    >
-                      <TabsList className="grid grid-cols-3 h-8">
-                        <TabsTrigger value="semantic-scholar">
-                          Semantic Scholar
-                        </TabsTrigger>
-                        <TabsTrigger value="pubmed">PubMed</TabsTrigger>
-                        <TabsTrigger value="arxiv">arXiv</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <Button type="submit" size="sm" className="h-8">
-              Search
-            </Button>
-          </div>
+      <div className="space-y-2">
+        <label className="text-base font-medium inline-flex items-center">
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="w-4 h-4 mr-2 text-primary"
+          >
+            <path d="M21 9V8a2 2 0 0 0-2-2h-5.5"/>
+            <path d="M9 6H3a2 2 0 0 0-2 2v1"/>
+            <path d="M3 16v-1a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1"/>
+            <path d="M9 18h12a2 2 0 0 0 2-2v-1"/>
+            <path d="M3 18v-1a2 2 0 0 1 2-2h4.5"/>
+          </svg>
+          Select Database
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant={selectedApi === 'openalex' ? 'default' : 'outline'}
+            onClick={() => setSelectedApi('openalex')}
+            className={`flex items-center justify-center h-14 ${selectedApi === 'openalex' ? 'ring-2 ring-primary/20' : ''}`}
+          >
+            <div className="flex flex-col items-center">
+              <span className="font-semibold">OpenAlex</span>
+              <span className="text-xs mt-1 opacity-80">Broad Coverage</span>
+            </div>
+          </Button>
+          <Button
+            type="button"
+            variant={selectedApi === 'semanticscholar' ? 'default' : 'outline'}
+            onClick={() => setSelectedApi('semanticscholar')}
+            className={`flex items-center justify-center h-14 ${selectedApi === 'semanticscholar' ? 'ring-2 ring-primary/20' : ''}`}
+          >
+            <div className="flex flex-col items-center">
+              <span className="font-semibold">Semantic Scholar</span>
+              <span className="text-xs mt-1 opacity-80">AI Research</span>
+            </div>
+          </Button>
         </div>
+      </div>
 
-        {filtersExpanded && (
-          <div className="mt-3 pt-3 border-t animate-in fade-in slide-in-from-top-1 duration-200">
-            <FilterSidebar 
-              filters={filters} 
-              onFilterChange={(newFilters) => setFilters({ ...filters, ...newFilters })} 
-              showResetButton={true}
-              className="w-full bg-background/30 p-3 rounded-md"
-            />
-          </div>
-        )}
-      </form>
-    </Form>
+      <Button 
+        type="submit" 
+        className="w-full py-6 text-base mt-2" 
+        disabled={!hypothesis.trim()}
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="w-5 h-5 mr-2"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+        Search Research Papers
+      </Button>
+    </form>
   );
 } 
