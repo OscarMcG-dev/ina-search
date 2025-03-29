@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from 'react';
 import type { Work } from '@/lib/openalex';
 import { Button } from '@/components/ui/button';
 import { 
@@ -8,6 +11,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
+import { toast } from '@/components/ui/use-toast';
 
 interface ResearchPaperCardProps {
   paper: Work;
@@ -29,7 +33,78 @@ function formatAuthors(authorships: any[] | undefined) {
 }
 
 function ResearchPaperCard({ paper }: ResearchPaperCardProps) {
+  const [isSending, setIsSending] = useState(false);
   const authorsDisplay = formatAuthors(paper.authorships);
+  
+  const sendToOneNote = async () => {
+    try {
+      setIsSending(true);
+      const email = localStorage.getItem('user_email') || '';
+      
+      let userEmail = email;
+      if (!userEmail) {
+        // Prompt for email if not stored
+        userEmail = window.prompt('Please enter your email address to receive this paper in OneNote:') || '';
+        if (!userEmail || !userEmail.includes('@')) {
+          setIsSending(false);
+          toast({
+            variant: "destructive",
+            title: "Invalid Email",
+            description: "Please provide a valid email address.",
+          });
+          return;
+        }
+        
+        // Save the email for future use
+        localStorage.setItem('user_email', userEmail);
+      }
+      
+      const response = await fetch('/api/send-to-onenote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paper,
+          email: userEmail
+        }),
+      });
+      
+      // Handle non-JSON responses (like HTML error pages)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned a non-JSON response');
+      }
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || result.details || 'Failed to send to OneNote');
+      }
+      
+      // Display success message, including note about verified email if present
+      if (result.note) {
+        toast({
+          title: "Email Sent with Limitations",
+          description: result.note,
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Paper sent to your email for OneNote",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send to OneNote:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to send: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
   
   return (
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/50">
@@ -101,7 +176,7 @@ function ResearchPaperCard({ paper }: ResearchPaperCardProps) {
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-wrap gap-2 pt-2">
+      <CardFooter className="flex flex-wrap gap-3 pt-2">
         {paper.open_access_url && (
           <Button
             variant="default"
@@ -152,6 +227,33 @@ function ResearchPaperCard({ paper }: ResearchPaperCardProps) {
             View DOI
           </Button>
         )}
+        
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={sendToOneNote}
+          disabled={isSending}
+          className="flex items-center"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="w-3.5 h-3.5 mr-1"
+          >
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z" />
+            <path d="M16 3v4" />
+            <path d="M8 3v4" />
+            <path d="M3 11h18" />
+            <path d="M11 15h6" />
+            <path d="M11 19h6" />
+          </svg>
+          {isSending ? 'Sending...' : 'Send to OneNote'}
+        </Button>
       </CardFooter>
     </Card>
   );

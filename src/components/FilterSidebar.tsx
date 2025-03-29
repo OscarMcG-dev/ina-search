@@ -78,12 +78,12 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
         <p className="text-xs text-muted-foreground">Refine your research paper results</p>
       </div>
       
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-8">
         {/* Year Range Filter */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium">Publication Year</Label>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/40 rounded-md">
               {filters.selectedYearRange[0]} - {filters.selectedYearRange[1]}
             </span>
           </div>
@@ -94,7 +94,7 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
             step={1}
             value={[filters.selectedYearRange[0], filters.selectedYearRange[1]]}
             onValueChange={handleYearChange}
-            className="mt-2"
+            className="mt-3"
           />
           
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -103,13 +103,13 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
           </div>
         </div>
         
-        <Separator />
+        <Separator className="my-2" />
         
         {/* Citation Count Filter */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium">Citation Count</Label>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/40 rounded-md">
               {filters.selectedCitationRange[0]}+ citations
               {filters.selectedCitationRange[1] < filters.citationCount.max && 
                 ` to ${filters.selectedCitationRange[1]}`}
@@ -122,7 +122,7 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
             step={5}
             value={[filters.selectedCitationRange[0], filters.selectedCitationRange[1]]}
             onValueChange={handleCitationChange}
-            className="mt-2"
+            className="mt-3"
           />
           
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -131,15 +131,15 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
           </div>
         </div>
         
-        <Separator />
+        <Separator className="my-2" />
         
         {/* Publication Type Filter */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Label className="text-sm font-medium">Publication Type</Label>
           
-          <div className="space-y-2 mt-1">
+          <div className="space-y-3 mt-2">
             {filters.publicationTypes.map(type => (
-              <div key={type} className="flex items-center space-x-2">
+              <div key={type} className="flex items-center space-x-2 p-2 hover:bg-muted/30 rounded-md transition-colors">
                 <Checkbox
                   id={`publication-type-${type}`}
                   checked={filters.selectedPublicationTypes.includes(type)}
@@ -160,10 +160,10 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
           </div>
         </div>
         
-        <Separator />
+        <Separator className="my-2" />
         
         {/* Open Access Filter */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between p-2 hover:bg-muted/30 rounded-md transition-colors">
           <div className="space-y-1">
             <Label htmlFor="open-access" className="text-sm font-medium">Open Access Only</Label>
             <p className="text-xs text-muted-foreground">Show only freely available papers</p>
