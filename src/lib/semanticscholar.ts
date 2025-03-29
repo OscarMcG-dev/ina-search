@@ -1,6 +1,7 @@
 import { calculateRelevanceScore } from "./utils";
 import type { Work } from './openalex';
 import type { PaginatedResponse } from './openalex';
+import { SearchOptions as ApiSearchOptions } from './research-api';
 
 export interface SemanticScholarPaper {
   paperId: string;
@@ -59,17 +60,26 @@ export class SemanticScholarClient {
     console.log('SemanticScholarClient initialized with email:', this.contactEmail);
   }
 
-  private async fetchWithRetry(endpoint: string, params: URLSearchParams, retries = 3): Promise<Response> {
-    // Add the endpoint to the params
-    params.set('endpoint', endpoint);
+  private async fetchWithRetry(endpoint: string, params: Record<string, any>, retries = 3): Promise<Response> {
+    // Create a payload object with endpoint and parameters
+    const payload = {
+      endpoint,
+      ...params
+    };
     
-    const url = `${this.baseUrl}?${params.toString()}`;
-    console.log('Making request to Semantic Scholar API:', url);
+    const url = this.baseUrl;
+    console.log('Making request to Semantic Scholar API:', url, 'with payload:', payload);
 
     for (let i = 0; i < retries; i++) {
       try {
         console.log(`Attempt ${i + 1} of ${retries}`);
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
         
         console.log('Response status:', response.status);
         
@@ -80,51 +90,87 @@ export class SemanticScholarClient {
         }
 
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error('API error response:', errorData);
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+          let errorMessage;
+          try {
+            const errorData = await response.json();
+            console.error('API error response:', errorData);
+            errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+          } catch (e) {
+            // If the error response is not JSON, try to get text
+            const errorText = await response.text();
+            console.error('API error non-JSON response:', errorText);
+            errorMessage = errorText || `HTTP error! status: ${response.status}`;
+          }
+          throw new Error(errorMessage);
         }
 
         return response;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Attempt ${i + 1} failed:`, error);
-        if (i === retries - 1) throw error;
+        if (i === retries - 1) {
+          if (endpoint.includes('paper/search')) {
+            console.error('Search parameters that failed:', JSON.stringify(params, null, 2));
+          }
+          throw new Error(`Failed to fetch from ${endpoint}: ${error.message || 'Unknown error'}`);
+        }
         await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
       }
     }
     throw new Error('Failed after multiple retries');
   }
 
-  async searchPapers(query: string, page = 0): Promise<SemanticScholarResponse> {
-    console.log('Searching papers with query:', query, 'page:', page);
+  async searchPapers(
+    query: string, 
+    page = 0, 
+    options?: {
+      yearMin?: number;
+      yearMax?: number;
+      minCitations?: number;
+      openAccessOnly?: boolean;
+    }
+  ): Promise<SemanticScholarResponse> {
+    console.log('Searching papers with query:', query, 'page:', page, 'options:', options);
     const offset = page * this.resultsPerPage;
 
     // Format the query to handle special characters and improve search results
-    const formattedQuery = query
+    // We're removing advanced filters from the basic query to improve search quality
+    const basicQuery = query
       .replace(/['"]/g, '') // Remove quotes as the API handles them differently
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
 
-    const searchParams = new URLSearchParams({
-      query: formattedQuery,
-      offset: offset.toString(),
-      limit: this.resultsPerPage.toString(),
+    // Prepare parameters according to the Semantic Scholar API documentation
+    // Using the basic query only, without filters in the query string
+    const params = {
+      query: basicQuery,
+      offset: offset,
+      limit: this.resultsPerPage,
       fields: this.fields,
-      year: '2000-', // Limit to papers from 2000 onwards for better relevance
-    });
+      // Add API-specific filters as query parameters instead of in the query string
+      // This provides better search results than adding them to the query
+      year: options?.yearMin && options?.yearMax 
+        ? `${options.yearMin}-${options.yearMax}`
+        : options?.yearMin 
+          ? `${options.yearMin}-` 
+          : options?.yearMax 
+            ? `-${options.yearMax}`
+            : undefined,
+      minCitationCount: options?.minCitations,
+      openAccessPdf: options?.openAccessOnly ? 'true' : undefined
+    };
 
-    const response = await this.fetchWithRetry('paper/search', searchParams);
+    const response = await this.fetchWithRetry('paper/search', params);
     const data = await response.json();
     console.log('Response data:', JSON.stringify(data, null, 2));
     return data;
   }
 
   async getPaperById(id: string): Promise<SemanticScholarPaper> {
-    const searchParams = new URLSearchParams({
+    const params = {
       fields: this.fields,
-    });
+    };
 
-    const response = await this.fetchWithRetry(`paper/${id}`, searchParams);
+    const response = await this.fetchWithRetry(`paper/${id}`, params);
     return response.json();
   }
 
@@ -138,6 +184,7 @@ export class SemanticScholarClient {
       cited_by_count: paper.citationCount,
       is_open_access: paper.isOpenAccess || false,
       open_access_url: paper.openAccessPdf?.url,
+      doi: paper.url?.includes('doi.org/') ? paper.url.split('doi.org/')[1] : undefined,
       authorships: paper.authors.map(author => ({
         author: {
           id: author.authorId,
@@ -148,9 +195,13 @@ export class SemanticScholarClient {
     };
   }
 
-  async searchByHypothesis(hypothesis: string, page = 1): Promise<PaginatedResponse<Work>> {
+  async searchByHypothesis(
+    hypothesis: string, 
+    page = 1,
+    options?: ApiSearchOptions
+  ): Promise<PaginatedResponse<Work>> {
     try {
-      console.log('Searching by hypothesis:', hypothesis, 'page:', page);
+      console.log('Searching by hypothesis:', hypothesis, 'page:', page, 'options:', options);
       
       // Format the hypothesis into keywords for better search results
       const searchTerms = hypothesis
@@ -160,19 +211,53 @@ export class SemanticScholarClient {
       
       console.log('Search terms:', searchTerms);
       
-      const response = await this.searchPapers(searchTerms, page - 1);
+      const searchOptions = {
+        yearMin: options?.fromYear,
+        yearMax: options?.toYear,
+        minCitations: options?.minCitations !== undefined ? options.minCitations : 5, // Default to minimum 5 citations
+        openAccessOnly: options?.openAccess
+      };
+      
+      const response = await this.searchPapers(searchTerms, page - 1, searchOptions);
       console.log('Search response:', JSON.stringify(response, null, 2));
       
-      const works = response.data.map(paper => ({
+      // Filter out results that don't match publication types if specified
+      let filteredData = response.data;
+      if (options?.publicationTypes && options.publicationTypes.length > 0) {
+        filteredData = response.data.filter(paper => {
+          if (!paper.publicationTypes || paper.publicationTypes.length === 0) {
+            return false;
+          }
+          return paper.publicationTypes.some(type => 
+            options.publicationTypes?.includes(type.toLowerCase())
+          );
+        });
+      }
+      
+      const works = filteredData.map(paper => ({
         ...this.convertToWork(paper),
         relevance_score: calculateRelevanceScore(this.convertToWork(paper))
       }));
 
+      // Sort works based on sortBy option if provided
+      const sortedWorks = works.sort((a, b) => {
+        if (options?.sortBy) {
+          switch (options.sortBy) {
+            case 'citations':
+              return (b.cited_by_count || 0) - (a.cited_by_count || 0);
+            case 'year':
+              return (b.publication_year || 0) - (a.publication_year || 0);
+            case 'title':
+              return (a.title || '').localeCompare(b.title || '');
+          }
+        }
+        // Default sort by relevance score
+        return (b.relevance_score || 0) - (a.relevance_score || 0);
+      });
+
       return {
-        results: works.sort((a, b) => 
-          (b.relevance_score || 0) - (a.relevance_score || 0)
-        ),
-        total: response.total,
+        results: sortedWorks,
+        total: works.length > 0 ? response.total : 0,
         page,
         totalPages: Math.ceil(response.total / this.resultsPerPage)
       };
